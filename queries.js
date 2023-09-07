@@ -27,4 +27,43 @@ db.mentors.find({mentee_count : {$gte:15}})
 
 // 6.Find the number of users who are absent and task is not submitted  between 15 oct-2020 and 31-oct-2020
 
-db.users.find( { $or: [ { absent_on: { $exists: true, $ne: [] }}, { submitted_task: { $exists: true, $ne: [] }} ] } ).count()
+db.Attendance.aggregate([
+    {
+      $match: {
+        date: {
+          $gte: ISODate("2020-10-15T00:00:00Z"),
+          $lte: ISODate("2020-10-31T23:59:59Z")
+        },
+        present: false
+      }
+    },
+    {
+      $lookup: {
+        from: "Tasks",
+        localField: "user_id",
+        foreignField: "user_id",
+        as: "tasks"
+      }
+    },
+    {
+      $match: {
+        "tasks.date": {
+          $gte: ISODate("2020-10-15T00:00:00Z"),
+          $lte: ISODate("2020-10-31T23:59:59Z")
+        },
+        "tasks.task_description": { $exists: false }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        num_users: { $sum: 1 }
+      }
+    },
+    {
+      $project: {
+        _id: 0
+      }
+    }
+  ]);
+  
